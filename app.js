@@ -12,6 +12,17 @@ function currentTour() {
   return currentTourId ? DB.getTour(currentTourId) : null;
 }
 
+/* ---- i18n display helpers ----------------------------------------------------
+   Canonical stored values (statuses, room types, tour/member/room data) are kept
+   as-is; only their display goes through t(). */
+const STATUS_LABEL_KEY = {
+  unpaid: "status_unpaid", deposit: "status_deposit", paid: "status_paid",
+};
+function statusLabel(s) {
+  const k = STATUS_LABEL_KEY[s];
+  return k ? t(k) : (s || "");
+}
+
 // ---- tabs ------------------------------------------------------------------
 document.querySelectorAll(".tabs button").forEach((b) => {
   b.addEventListener("click", () => {
@@ -28,7 +39,7 @@ function refreshTourSelect() {
   const sel = $("tour-select");
   sel.innerHTML = tours.map((t) =>
     `<option value="${t.id}"${String(t.id) === String(currentTourId) ? " selected" : ""}>${esc(t.name)}${t.destination ? " · " + esc(t.destination) : ""}</option>`
-  ).join("") || '<option value="">（未有旅行團）</option>';
+  ).join("") || `<option value="">${t("opt_no_tours")}</option>`;
   if (!tours.length) currentTourId = null;
   else if (!tours.some((t) => String(t.id) === String(currentTourId))) currentTourId = tours[0].id;
   renderAll();
@@ -47,7 +58,7 @@ function renderAll() {
 // ---- dashboard ---------------------------------------------------------------
 function renderDashboard() {
   const t = currentTour();
-  $("tour-title").textContent = t ? `${t.name}${t.destination ? " · " + t.destination : ""}${t.start_date ? "（" + t.start_date + "）" : ""}` : "團概覽";
+  $("tour-title").textContent = t ? `${t.name}${t.destination ? " · " + t.destination : ""}${t.start_date ? "（" + t.start_date + "）" : ""}` : t("dash_title");
   const st = t ? DB.stats(t.id) : { count: 0, collected: 0, outstanding: 0, unpaid: 0, rooms: 0 };
   $("st-count").textContent = st.count;
   $("st-collected").textContent = st.collected;
@@ -58,7 +69,7 @@ function renderDashboard() {
 
 // ---- members -----------------------------------------------------------------
 function statusPill(status) {
-  return `<span class="pill pill-${status}">${MEMBER_STATUS_LABELS[status]}</span>`;
+  return `<span class="pill pill-${status}">${statusLabel(status)}</span>`;
 }
 function renderMembers() {
   const t = currentTour();
@@ -70,15 +81,15 @@ function renderMembers() {
       <td>${esc(m.name)}</td><td>${esc(m.phone)}</td>
       <td>${m.price}</td><td>${m.deposit_paid}</td><td>${memberBalance(m)}</td>
       <td>${statusPill(status)}</td>
-      <td>${room ? esc(room.label) : "<span class='muted'>未編房</span>"}</td>
+      <td>${room ? esc(room.label) : `<span class='muted'>${t("room_unassigned")}</span>`}</td>
       <td><div class="row-actions">
-        ${link ? `<a href="${link}" target="_blank" rel="noopener">📲 追款</a>` : ""}
-        <button data-act="pay" data-id="${m.id}">＋ 付款</button>
-        <button data-act="edit" data-id="${m.id}">編輯</button>
-        <button data-act="del" data-id="${m.id}" style="color:var(--red)">刪除</button>
+        ${link ? `<a href="${link}" target="_blank" rel="noopener">${t("btn_chase")}</a>` : ""}
+        <button data-act="pay" data-id="${m.id}">${t("btn_pay")}</button>
+        <button data-act="edit" data-id="${m.id}">${t("btn_edit")}</button>
+        <button data-act="del" data-id="${m.id}" style="color:var(--red)">${t("btn_delete")}</button>
       </div></td></tr>`;
   }).join("") : "";
-  $("member-rows").innerHTML = rows || `<tr><td colspan="8" class="muted">未有團員</td></tr>`;
+  $("member-rows").innerHTML = rows || `<tr><td colspan="8" class="muted">${t("no_members")}</td></tr>`;
 }
 $("member-rows").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-act]");
@@ -86,11 +97,12 @@ $("member-rows").addEventListener("click", (e) => {
   const m = DB.getMember(btn.dataset.id);
   if (!m) return;
   if (btn.dataset.act === "edit") openMemberDialog(m);
-  if (btn.dataset.act === "del" && confirm(`刪除團員「${m.name}」？`)) {
+  if (btn.dataset.act === "del" && confirm(t("confirm_del_member").replace("{name}", m.name))) {
     DB.deleteMember(m.id); renderAll();
   }
   if (btn.dataset.act === "pay") {
-    $("pay-info").textContent = `${m.name}：已付 ${m.deposit_paid}，尚欠 ${memberBalance(m)}`;
+    $("pay-info").textContent = t("pay_info_tmpl").replace("{name}", m.name)
+      .replace("{paid}", m.deposit_paid).replace("{due}", memberBalance(m));
     $("pay-amount").value = "";
     payTargetId = m.id;
     $("dlg-pay").showModal();
@@ -105,9 +117,9 @@ $("btn-pay-save").addEventListener("click", () => {
 });
 $("btn-member-new").addEventListener("click", () => openMemberDialog(null));
 function openMemberDialog(m) {
-  if (!currentTour()) { alert("請先新增旅行團"); return; }
+  if (!currentTour()) { alert(t("alert_need_tour")); return; }
   const t = DB.getTour(currentTourId);
-  $("dlg-member-title").textContent = m ? "編輯團員" : "新增團員";
+  $("dlg-member-title").textContent = t(m ? "dlg_member_edit" : "dlg_member_new");
   $("member-id").value = m ? m.id : "";
   $("member-name").value = m ? m.name : "";
   $("member-phone").value = m ? m.phone : "";
@@ -132,7 +144,7 @@ $("btn-member-save").addEventListener("click", () => {
 
 // ---- rooms -------------------------------------------------------------------
 $("btn-room-new").addEventListener("click", () => {
-  if (!currentTour()) { alert("請先新增旅行團"); return; }
+  if (!currentTour()) { alert(t("alert_need_tour")); return; }
   $("room-label").value = "";
   $("dlg-room").showModal();
 });
@@ -149,20 +161,20 @@ function renderRooms() {
   $("room-list").innerHTML = DB.rooms(t.id).map((r) => {
     const chips = (r.member_ids || []).map((id) => {
       const m = byId[String(id)];
-      return m ? `<span class="member-chip">${esc(m.name)}<button data-room="${r.id}" data-m="${m.id}" title="移出">✕</button></span>` : "";
+      return m ? `<span class="member-chip">${esc(m.name)}<button data-room="${r.id}" data-m="${m.id}" title="${t("tip_remove")}">✕</button></span>` : "";
     }).join("");
     const opts = members.map((m) =>
       `<option value="${m.id}">${esc(m.name)}</option>`).join("");
     return `<div class="room-box">
-      <h3>${esc(r.label)} <span class="muted">（${esc(r.type)} · ${(r.member_ids || []).length} 人）</span></h3>
-      <div>${chips || '<span class="muted">未有人</span>'}</div>
+      <h3>${esc(r.label)} <span class="muted">${t("room_head_tmpl").replace("{type}", esc(r.type)).replace("{n}", (r.member_ids || []).length)}</span></h3>
+      <div>${chips || `<span class="muted">${t("room_empty")}</span>`}</div>
       <div class="toolbar" style="margin-top:0.5rem">
-        <select data-addroom="${r.id}"><option value="">＋ 加入團員…</option>${opts}</select>
-        <button data-roomdel="${r.id}" style="color:var(--red)">刪除房間</button>
+        <select data-addroom="${r.id}"><option value="">${t("opt_add_member")}</option>${opts}</select>
+        <button data-roomdel="${r.id}" style="color:var(--red)">${t("btn_room_delete")}</button>
       </div></div>`;
-  }).join("") || '<p class="muted">未有房間</p>';
+  }).join("") || `<p class="muted">${t("no_rooms")}</p>`;
   $("unassigned-list").innerHTML = DB.unassignedMembers(t.id).map((m) =>
-    `<span class="member-chip">${esc(m.name)}</span>`).join("") || '<span class="muted">全部已編房</span>';
+    `<span class="member-chip">${esc(m.name)}</span>`).join("") || `<span class="muted">${t("rooms_all_assigned")}</span>`;
 }
 $("room-list").addEventListener("change", (e) => {
   const sel = e.target.closest("select[data-addroom]");
@@ -174,12 +186,12 @@ $("room-list").addEventListener("click", (e) => {
   const rm = e.target.closest("button[data-room]");
   if (rm) { DB.unassignMember(currentTourId, rm.dataset.m); renderAll(); return; }
   const del = e.target.closest("button[data-roomdel]");
-  if (del && confirm("刪除此房間？")) { DB.deleteRoom(del.dataset.roomdel); renderAll(); }
+  if (del && confirm(t("confirm_del_room"))) { DB.deleteRoom(del.dataset.roomdel); renderAll(); }
 });
 
 // ---- tours ---------------------------------------------------------------------
 $("btn-tour-new").addEventListener("click", () => {
-  $("dlg-tour-title").textContent = "新增旅行團";
+  $("dlg-tour-title").textContent = t("dlg_tour_new");
   $("tour-id").value = ""; $("tour-name").value = ""; $("tour-dest").value = "";
   $("tour-start").value = ""; $("tour-end").value = "";
   $("tour-price").value = ""; $("tour-deposit").value = "";
@@ -187,8 +199,8 @@ $("btn-tour-new").addEventListener("click", () => {
 });
 $("btn-tour-edit").addEventListener("click", () => {
   const t = currentTour();
-  if (!t) { alert("請先新增旅行團"); return; }
-  $("dlg-tour-title").textContent = "編輯旅行團";
+  if (!t) { alert(t("alert_need_tour")); return; }
+  $("dlg-tour-title").textContent = t("dlg_tour_edit");
   $("tour-id").value = t.id; $("tour-name").value = t.name; $("tour-dest").value = t.destination;
   $("tour-start").value = t.start_date; $("tour-end").value = t.end_date;
   $("tour-price").value = t.price_per_person; $("tour-deposit").value = t.deposit_per_person;
@@ -210,7 +222,7 @@ $("btn-tour-save").addEventListener("click", () => {
 });
 $("btn-tour-delete").addEventListener("click", () => {
   const t = currentTour();
-  if (!t || !confirm(`刪除旅行團「${t.name}」及所有團員和房間？`)) return;
+  if (!t || !confirm(t("confirm_del_tour").replace("{name}", t.name))) return;
   DB.deleteTour(t.id);
   currentTourId = null;
   refreshTourSelect();
@@ -232,9 +244,10 @@ $("frm-settings").addEventListener("submit", (e) => {
     fps_name: $("set-fps-name").value.trim(),
     chase_message: $("set-chase").value,
   });
-  alert("已儲存");
+  alert(t("alert_saved"));
 });
 
 // ---- init ------------------------------------------------------------------------
 loadSettings();
+applyI18n();
 refreshTourSelect();
