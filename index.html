@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>旅行團房間＋訂金管理</title>
+<title data-i18n="title">旅行團房間＋訂金管理</title>
 <link rel="stylesheet" href="style.css">
 <style>
   .tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
@@ -25,141 +25,151 @@
   .room-box h3 { margin: 0 0 0.4rem; }
   .member-chip { display: inline-block; background: var(--accent-soft); border-radius: 999px; padding: 0.2rem 0.7rem; margin: 0.15rem; font-size: 0.88rem; }
   .member-chip button { border: none; background: none; color: var(--red); cursor: pointer; margin-left: 0.3rem; font-weight: 700; }
+  .lang-switch { display: flex; gap: 0.3rem; margin-left: 0.8rem; }
+  .lang-switch button { border: 1px solid #6b5138; background: transparent;
+    color: #d8d2c4; border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; }
+  .lang-switch button.active { background: #3a322a; color: #fff;
+    border-color: transparent; }
 </style>
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">🧳 旅行團管理</div>
+  <div class="brand" data-i18n="brand">🧳 旅行團管理</div>
   <nav class="tabs">
-    <button data-tab="tours" class="active">團</button>
-    <button data-tab="members">團員</button>
-    <button data-tab="rooms">房間</button>
-    <button data-tab="settings">設定</button>
+    <button data-tab="tours" class="active" data-i18n="tab_tours">團</button>
+    <button data-tab="members" data-i18n="tab_members">團員</button>
+    <button data-tab="rooms" data-i18n="tab_rooms">房間</button>
+    <button data-tab="settings" data-i18n="tab_settings">設定</button>
   </nav>
+  <div class="lang-switch">
+    <button type="button" data-lang-btn="zh">繁中</button>
+    <button type="button" data-lang-btn="en">EN</button>
+  </div>
 </header>
 <main class="container">
 
   <div class="toolbar">
-    <label>選擇旅行團：
+    <label><span data-i18n="lbl_select_tour">選擇旅行團：</span>
       <select id="tour-select" style="min-width:220px"></select>
     </label>
-    <button id="btn-tour-new">＋ 新增旅行團</button>
+    <button id="btn-tour-new" data-i18n="btn_tour_new">＋ 新增旅行團</button>
   </div>
 
   <!-- Tours dashboard -->
   <section id="view-tours" class="view active">
-    <h1 id="tour-title">團概覽</h1>
+    <h1 id="tour-title" data-i18n="dash_title">團概覽</h1>
     <section class="cards">
-      <div class="card"><div class="card-num" id="st-count">0</div><div class="card-label">團員人數</div></div>
-      <div class="card"><div class="card-num" id="st-collected">0</div><div class="card-label">已收款 (HKD)</div></div>
-      <div class="card"><div class="card-num" id="st-outstanding">0</div><div class="card-label">尚欠 (HKD)</div></div>
-      <div class="card"><div class="card-num" id="st-unpaid">0</div><div class="card-label">未付人數</div></div>
-      <div class="card"><div class="card-num" id="st-rooms">0</div><div class="card-label">房間數</div></div>
+      <div class="card"><div class="card-num" id="st-count">0</div><div class="card-label" data-i18n="card_members">團員人數</div></div>
+      <div class="card"><div class="card-num" id="st-collected">0</div><div class="card-label" data-i18n="card_collected">已收款 (HKD)</div></div>
+      <div class="card"><div class="card-num" id="st-outstanding">0</div><div class="card-label" data-i18n="card_outstanding">尚欠 (HKD)</div></div>
+      <div class="card"><div class="card-num" id="st-unpaid">0</div><div class="card-label" data-i18n="card_unpaid_n">未付人數</div></div>
+      <div class="card"><div class="card-num" id="st-rooms">0</div><div class="card-label" data-i18n="card_rooms">房間數</div></div>
     </section>
     <div class="row-actions" style="margin-top:1rem">
-      <button id="btn-tour-edit">✏️ 編輯此團</button>
-      <button id="btn-tour-delete" style="color:var(--red)">🗑 刪除此團</button>
+      <button id="btn-tour-edit" data-i18n="btn_tour_edit">✏️ 編輯此團</button>
+      <button id="btn-tour-delete" style="color:var(--red)" data-i18n="btn_tour_delete">🗑 刪除此團</button>
     </div>
   </section>
 
   <!-- Members -->
   <section id="view-members" class="view">
-    <h1>團員名單</h1>
+    <h1 data-i18n="members_title">團員名單</h1>
     <div class="toolbar">
-      <button id="btn-member-new">＋ 新增團員</button>
+      <button id="btn-member-new" data-i18n="btn_member_new">＋ 新增團員</button>
     </div>
     <table class="tbl"><thead><tr>
-      <th>姓名</th><th>電話</th><th>團費</th><th>已付</th><th>尚欠</th><th>狀態</th><th>房間</th><th>操作</th>
+      <th data-i18n="th_name">姓名</th><th data-i18n="th_phone">電話</th><th data-i18n="th_price">團費</th><th data-i18n="th_paid">已付</th><th data-i18n="th_balance">尚欠</th><th data-i18n="th_status">狀態</th><th data-i18n="th_room">房間</th><th data-i18n="th_actions">操作</th>
     </tr></thead><tbody id="member-rows"></tbody></table>
   </section>
 
   <!-- Rooms -->
   <section id="view-rooms" class="view">
-    <h1>房間編排</h1>
+    <h1 data-i18n="rooms_title">房間編排</h1>
     <div class="toolbar">
-      <button id="btn-room-new">＋ 新增房間</button>
+      <button id="btn-room-new" data-i18n="btn_room_new">＋ 新增房間</button>
     </div>
     <div id="room-list"></div>
-    <h2>未編房團員</h2>
+    <h2 data-i18n="rooms_unassigned_title">未編房團員</h2>
     <div id="unassigned-list"></div>
   </section>
 
   <!-- Settings -->
   <section id="view-settings" class="view">
-    <h1>設定</h1>
+    <h1 data-i18n="settings_title">設定</h1>
     <form id="frm-settings" class="form">
-      <label>公司／操作員名稱<input id="set-operator" name="operator_name"></label>
-      <label>FPS 轉數 ID<input id="set-fps-id" name="fps_id"></label>
-      <label>FPS 登記姓名<input id="set-fps-name" name="fps_name"></label>
-      <label>WhatsApp 追款訊息<textarea id="set-chase" name="chase_message" rows="4"></textarea>
-      <div class="muted">可用變數：{operator} {tour} {price} {deposit} {due} {fps_id} {fps_name}</div>
-      <div style="margin-top:0.8rem"><button type="submit">儲存設定</button></div>
+      <label><span data-i18n="lbl_operator">公司／操作員名稱</span><input id="set-operator" name="operator_name"></label>
+      <label><span data-i18n="lbl_fps_id">FPS 轉數 ID</span><input id="set-fps-id" name="fps_id"></label>
+      <label><span data-i18n="lbl_fps_name">FPS 登記姓名</span><input id="set-fps-name" name="fps_name"></label>
+      <label><span data-i18n="lbl_chase_msg">WhatsApp 追款訊息</span><textarea id="set-chase" name="chase_message" rows="4"></textarea>
+      <div class="muted" data-i18n="settings_vars">可用變數：{operator} {tour} {price} {deposit} {due} {fps_id} {fps_name}</div>
+      <div style="margin-top:0.8rem"><button type="submit" data-i18n="btn_save_settings">儲存設定</button></div>
     </form>
   </section>
 
   <!-- Tour dialog -->
   <dialog id="dlg-tour">
     <form method="dialog" id="frm-tour" class="form">
-      <h2 id="dlg-tour-title">新增旅行團</h2>
+      <h2 id="dlg-tour-title" data-i18n="dlg_tour_new">新增旅行團</h2>
       <input type="hidden" id="tour-id" name="id">
-      <label>團名<input id="tour-name" name="name" required></label>
-      <label>目的地<input id="tour-dest" name="destination"></label>
+      <label><span data-i18n="lbl_tour_name">團名</span><input id="tour-name" name="name" required></label>
+      <label><span data-i18n="lbl_tour_dest">目的地</span><input id="tour-dest" name="destination"></label>
       <div class="inline">
-        <label>出發日期<input id="tour-start" name="start_date" type="date"></label>
-        <label>回程日期<input id="tour-end" name="end_date" type="date"></label>
+        <label><span data-i18n="lbl_tour_start">出發日期</span><input id="tour-start" name="start_date" type="date"></label>
+        <label><span data-i18n="lbl_tour_end">回程日期</span><input id="tour-end" name="end_date" type="date"></label>
       </div>
       <div class="inline">
-        <label>每人團費 (HKD)<input id="tour-price" name="price_per_person" type="number" min="0" step="1"></label>
-        <label>每人訂金 (HKD)<input id="tour-deposit" name="deposit_per_person" type="number" min="0" step="1"></label>
+        <label><span data-i18n="lbl_tour_price">每人團費 (HKD)</span><input id="tour-price" name="price_per_person" type="number" min="0" step="1"></label>
+        <label><span data-i18n="lbl_tour_deposit">每人訂金 (HKD)</span><input id="tour-deposit" name="deposit_per_person" type="number" min="0" step="1"></label>
       </div>
-      <div class="row-actions"><button id="btn-tour-save" value="default">儲存</button>
-      <button value="cancel" formnovalidate>取消</button></div>
+      <div class="row-actions"><button id="btn-tour-save" value="default" data-i18n="btn_save">儲存</button>
+      <button value="cancel" formnovalidate data-i18n="btn_cancel">取消</button></div>
     </form>
   </dialog>
 
   <!-- Member dialog -->
   <dialog id="dlg-member">
     <form method="dialog" id="frm-member" class="form">
-      <h2 id="dlg-member-title">新增團員</h2>
+      <h2 id="dlg-member-title" data-i18n="dlg_member_new">新增團員</h2>
       <input type="hidden" id="member-id" name="id">
-      <label>姓名<input id="member-name" name="name" required></label>
-      <label>電話<input id="member-phone" name="phone" placeholder="8位數字"></label>
+      <label><span data-i18n="lbl_member_name">姓名</span><input id="member-name" name="name" required></label>
+      <label><span data-i18n="lbl_member_phone">電話</span><input id="member-phone" name="phone" data-i18n-ph="ph_phone_8" placeholder="8位數字"></label>
       <div class="inline">
-        <label>團費 (HKD)<input id="member-price" name="price" type="number" min="0" step="1"></label>
-        <label>已付金額 (HKD)<input id="member-paid" name="deposit_paid" type="number" min="0" step="1"></label>
+        <label><span data-i18n="lbl_member_price">團費 (HKD)</span><input id="member-price" name="price" type="number" min="0" step="1"></label>
+        <label><span data-i18n="lbl_member_paid">已付金額 (HKD)</span><input id="member-paid" name="deposit_paid" type="number" min="0" step="1"></label>
       </div>
-      <label>備註<textarea id="member-notes" name="notes" rows="2"></textarea></label>
-      <div class="row-actions"><button id="btn-member-save" value="default">儲存</button>
-      <button value="cancel" formnovalidate>取消</button></div>
+      <label><span data-i18n="lbl_member_notes">備註</span><textarea id="member-notes" name="notes" rows="2"></textarea></label>
+      <div class="row-actions"><button id="btn-member-save" value="default" data-i18n="btn_save">儲存</button>
+      <button value="cancel" formnovalidate data-i18n="btn_cancel">取消</button></div>
     </form>
   </dialog>
 
   <!-- Room dialog -->
   <dialog id="dlg-room">
     <form method="dialog" id="frm-room" class="form">
-      <h2>新增房間</h2>
-      <label>房號／標籤<input id="room-label" name="label" required placeholder="例：301"></label>
-      <label>房型<select id="room-type" name="type">
+      <h2 data-i18n="dlg_room_new">新增房間</h2>
+      <label><span data-i18n="lbl_room_label">房號／標籤</span><input id="room-label" name="label" required data-i18n-ph="ph_room_label" placeholder="例：301"></label>
+      <label><span data-i18n="lbl_room_type">房型</span><select id="room-type" name="type">
         <option>Twin</option><option>Double</option><option>Single</option><option>Triple</option>
       </select></label>
-      <div class="row-actions"><button id="btn-room-save" value="default">儲存</button>
-      <button value="cancel" formnovalidate>取消</button></div>
+      <div class="row-actions"><button id="btn-room-save" value="default" data-i18n="btn_save">儲存</button>
+      <button value="cancel" formnovalidate data-i18n="btn_cancel">取消</button></div>
     </form>
   </dialog>
 
   <!-- Payment dialog -->
   <dialog id="dlg-pay">
     <form method="dialog" id="frm-pay" class="form">
-      <h2>記錄付款</h2>
+      <h2 data-i18n="dlg_pay_title">記錄付款</h2>
       <p class="muted" id="pay-info"></p>
-      <label>金額 (HKD)<input id="pay-amount" type="number" min="0" step="1" required></label>
-      <div class="row-actions"><button id="btn-pay-save" value="default">儲存</button>
-      <button value="cancel" formnovalidate>取消</button></div>
+      <label><span data-i18n="lbl_pay_amount">金額 (HKD)</span><input id="pay-amount" type="number" min="0" step="1" required></label>
+      <div class="row-actions"><button id="btn-pay-save" value="default" data-i18n="btn_save">儲存</button>
+      <button value="cancel" formnovalidate data-i18n="btn_cancel">取消</button></div>
     </form>
   </dialog>
 
 </main>
 <script src="db.js"></script>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
