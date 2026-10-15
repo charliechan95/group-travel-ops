@@ -57,9 +57,9 @@ function renderAll() {
 
 // ---- dashboard ---------------------------------------------------------------
 function renderDashboard() {
-  const t = currentTour();
-  $("tour-title").textContent = t ? `${t.name}${t.destination ? " · " + t.destination : ""}${t.start_date ? "（" + t.start_date + "）" : ""}` : t("dash_title");
-  const st = t ? DB.stats(t.id) : { count: 0, collected: 0, outstanding: 0, unpaid: 0, rooms: 0 };
+  const tour = currentTour();
+  $("tour-title").textContent = tour ? `${tour.name}${tour.destination ? " · " + tour.destination : ""}${tour.start_date ? "（" + tour.start_date + "）" : ""}` : t("dash_title");
+  const st = tour ? DB.stats(tour.id) : { count: 0, collected: 0, outstanding: 0, unpaid: 0, rooms: 0 };
   $("st-count").textContent = st.count;
   $("st-collected").textContent = st.collected;
   $("st-outstanding").textContent = st.outstanding;
@@ -72,11 +72,11 @@ function statusPill(status) {
   return `<span class="pill pill-${status}">${statusLabel(status)}</span>`;
 }
 function renderMembers() {
-  const t = currentTour();
-  const rows = t ? DB.members(t.id).map((m) => {
+  const tour = currentTour();
+  const rows = tour ? DB.members(tour.id).map((m) => {
     const status = memberStatus(m);
     const link = DB.chaseLink(m);
-    const room = DB.roomOfMember(t.id, m.id);
+    const room = DB.roomOfMember(tour.id, m.id);
     return `<tr>
       <td>${esc(m.name)}</td><td>${esc(m.phone)}</td>
       <td>${m.price}</td><td>${m.deposit_paid}</td><td>${memberBalance(m)}</td>
@@ -118,12 +118,12 @@ $("btn-pay-save").addEventListener("click", () => {
 $("btn-member-new").addEventListener("click", () => openMemberDialog(null));
 function openMemberDialog(m) {
   if (!currentTour()) { alert(t("alert_need_tour")); return; }
-  const t = DB.getTour(currentTourId);
+  const tour = DB.getTour(currentTourId);
   $("dlg-member-title").textContent = t(m ? "dlg_member_edit" : "dlg_member_new");
   $("member-id").value = m ? m.id : "";
   $("member-name").value = m ? m.name : "";
   $("member-phone").value = m ? m.phone : "";
-  $("member-price").value = m ? m.price : t.price_per_person;
+  $("member-price").value = m ? m.price : tour.price_per_person;
   $("member-paid").value = m ? m.deposit_paid : 0;
   $("member-notes").value = m ? m.notes : "";
   $("dlg-member").showModal();
@@ -154,11 +154,11 @@ $("btn-room-save").addEventListener("click", () => {
   renderAll();
 });
 function renderRooms() {
-  const t = currentTour();
-  if (!t) { $("room-list").innerHTML = ""; $("unassigned-list").innerHTML = ""; return; }
-  const members = DB.members(t.id);
+  const tour = currentTour();
+  if (!tour) { $("room-list").innerHTML = ""; $("unassigned-list").innerHTML = ""; return; }
+  const members = DB.members(tour.id);
   const byId = Object.fromEntries(members.map((m) => [String(m.id), m]));
-  $("room-list").innerHTML = DB.rooms(t.id).map((r) => {
+  $("room-list").innerHTML = DB.rooms(tour.id).map((r) => {
     const chips = (r.member_ids || []).map((id) => {
       const m = byId[String(id)];
       return m ? `<span class="member-chip">${esc(m.name)}<button data-room="${r.id}" data-m="${m.id}" title="${t("tip_remove")}">✕</button></span>` : "";
@@ -173,7 +173,7 @@ function renderRooms() {
         <button data-roomdel="${r.id}" style="color:var(--red)">${t("btn_room_delete")}</button>
       </div></div>`;
   }).join("") || `<p class="muted">${t("no_rooms")}</p>`;
-  $("unassigned-list").innerHTML = DB.unassignedMembers(t.id).map((m) =>
+  $("unassigned-list").innerHTML = DB.unassignedMembers(tour.id).map((m) =>
     `<span class="member-chip">${esc(m.name)}</span>`).join("") || `<span class="muted">${t("rooms_all_assigned")}</span>`;
 }
 $("room-list").addEventListener("change", (e) => {
@@ -198,17 +198,17 @@ $("btn-tour-new").addEventListener("click", () => {
   $("dlg-tour").showModal();
 });
 $("btn-tour-edit").addEventListener("click", () => {
-  const t = currentTour();
-  if (!t) { alert(t("alert_need_tour")); return; }
+  const tour = currentTour();
+  if (!tour) { alert(t("alert_need_tour")); return; }
   $("dlg-tour-title").textContent = t("dlg_tour_edit");
-  $("tour-id").value = t.id; $("tour-name").value = t.name; $("tour-dest").value = t.destination;
-  $("tour-start").value = t.start_date; $("tour-end").value = t.end_date;
-  $("tour-price").value = t.price_per_person; $("tour-deposit").value = t.deposit_per_person;
+  $("tour-id").value = tour.id; $("tour-name").value = tour.name; $("tour-dest").value = tour.destination;
+  $("tour-start").value = tour.start_date; $("tour-end").value = tour.end_date;
+  $("tour-price").value = tour.price_per_person; $("tour-deposit").value = tour.deposit_per_person;
   $("dlg-tour").showModal();
 });
 $("btn-tour-save").addEventListener("click", () => {
   if (!$("tour-name").value.trim()) return;
-  const t = DB.saveTour({
+  const tour = DB.saveTour({
     id: $("tour-id").value || undefined,
     name: $("tour-name").value.trim(),
     destination: $("tour-dest").value.trim(),
@@ -217,13 +217,13 @@ $("btn-tour-save").addEventListener("click", () => {
     price_per_person: $("tour-price").value,
     deposit_per_person: $("tour-deposit").value,
   });
-  currentTourId = t.id;
+  currentTourId = tour.id;
   refreshTourSelect();
 });
 $("btn-tour-delete").addEventListener("click", () => {
-  const t = currentTour();
-  if (!t || !confirm(t("confirm_del_tour").replace("{name}", t.name))) return;
-  DB.deleteTour(t.id);
+  const tour = currentTour();
+  if (!tour || !confirm(t("confirm_del_tour").replace("{name}", tour.name))) return;
+  DB.deleteTour(tour.id);
   currentTourId = null;
   refreshTourSelect();
 });
