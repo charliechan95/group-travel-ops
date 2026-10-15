@@ -2,6 +2,17 @@
    localStorage-backed, no backend. WhatsApp via wa.me deep links (manual send). */
 "use strict";
 
+function _lang() {
+  try { return localStorage.getItem("gto_lang") || "zh"; } catch { return "zh"; }
+}
+function _en() { return _lang() === "en"; }
+// English default for the WhatsApp chase message, used only until the user saves their own.
+// A user's saved custom text is never overridden.
+const EN_CHASE_MESSAGE =
+  "{operator} here: the tour \u201c{tour}\u201d you joined costs {price} per person, " +
+  "deposit is {deposit} per person, and your balance is {due}. " +
+  "Please pay by FPS to {fps_id} ({fps_name}) and send us the payment screenshot. Thank you!";
+
 /* ---- derived member maths (shared by UI and tests) ------------------------- */
 function memberBalance(m) {
   return Math.round(((+m.price || 0) - (+m.deposit_paid || 0)) * 100) / 100;
@@ -53,7 +64,11 @@ const DB = {
   // ---- Settings ------------------------------------------------------------
   settings() {
     const stored = this._read("gt_settings", {});
-    return { ...DEFAULT_SETTINGS, ...stored };
+    const merged = { ...DEFAULT_SETTINGS, ...stored };
+    if (!("chase_message" in stored) && _en()) {
+      merged.chase_message = EN_CHASE_MESSAGE;
+    }
+    return merged;
   },
   saveSettings(data) {
     const stored = this._read("gt_settings", {});
