@@ -143,14 +143,23 @@ $("btn-member-save").addEventListener("click", () => {
 });
 
 // ---- rooms -------------------------------------------------------------------
-$("btn-room-new").addEventListener("click", () => {
+$("btn-room-new").addEventListener("click", () => openRoomDialog(null));
+function openRoomDialog(r) {
   if (!currentTour()) { alert(t("alert_need_tour")); return; }
-  $("room-label").value = "";
+  $("dlg-room-title").textContent = t(r ? "dlg_room_edit" : "dlg_room_new");
+  $("room-id").value = r ? r.id : "";
+  $("room-label").value = r ? r.label : "";
+  $("room-type").value = r ? r.type : "Twin";
   $("dlg-room").showModal();
-});
+}
 $("btn-room-save").addEventListener("click", () => {
   if (!$("room-label").value.trim()) return;
-  DB.saveRoom({ tour_id: currentTourId, label: $("room-label").value.trim(), type: $("room-type").value });
+  DB.saveRoom({
+    id: $("room-id").value || undefined,
+    tour_id: currentTourId,
+    label: $("room-label").value.trim(),
+    type: $("room-type").value,
+  });
   renderAll();
 });
 function renderRooms() {
@@ -170,6 +179,7 @@ function renderRooms() {
       <div>${chips || `<span class="muted">${t("room_empty")}</span>`}</div>
       <div class="toolbar" style="margin-top:0.5rem">
         <select data-addroom="${r.id}"><option value="">${t("opt_add_member")}</option>${opts}</select>
+        <button data-roomedit="${r.id}">${t("btn_edit")}</button>
         <button data-roomdel="${r.id}" style="color:var(--red)">${t("btn_room_delete")}</button>
       </div></div>`;
   }).join("") || `<p class="muted">${t("no_rooms")}</p>`;
@@ -185,6 +195,12 @@ $("room-list").addEventListener("change", (e) => {
 $("room-list").addEventListener("click", (e) => {
   const rm = e.target.closest("button[data-room]");
   if (rm) { DB.unassignMember(currentTourId, rm.dataset.m); renderAll(); return; }
+  const ed = e.target.closest("button[data-roomedit]");
+  if (ed) {
+    const room = DB.rooms(currentTourId).find((r) => String(r.id) === String(ed.dataset.roomedit));
+    if (room) openRoomDialog(room);
+    return;
+  }
   const del = e.target.closest("button[data-roomdel]");
   if (del && confirm(t("confirm_del_room"))) { DB.deleteRoom(del.dataset.roomdel); renderAll(); }
 });
@@ -245,6 +261,41 @@ $("frm-settings").addEventListener("submit", (e) => {
     chase_message: $("set-chase").value,
   });
   alert(t("alert_saved"));
+});
+
+// ---- backup / restore ----------------------------------------------------------
+$("btn-export").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(DB.exportData(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  const d = new Date();
+  const stamp = d.getFullYear()
+    + String(d.getMonth() + 1).padStart(2, "0")
+    + String(d.getDate()).padStart(2, "0");
+  a.href = URL.createObjectURL(blob);
+  a.download = "group-travel-backup-" + stamp + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("btn-import").addEventListener("click", () => $("file-import").click());
+$("file-import").addEventListener("change", (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    let obj = null;
+    try { obj = JSON.parse(rd.result); } catch { obj = null; }
+    if (DB.importData(obj)) {
+      loadSettings();
+      refreshTourSelect();
+      alert(t("alert_import_ok"));
+    } else {
+      alert(t("alert_import_bad"));
+    }
+  };
+  rd.readAsText(f);
 });
 
 // ---- init ------------------------------------------------------------------------

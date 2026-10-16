@@ -104,6 +104,13 @@
       <div class="muted" data-i18n="settings_vars">可用變數：{operator} {tour} {price} {deposit} {due} {fps_id} {fps_name}</div>
       <div style="margin-top:0.8rem"><button type="submit" data-i18n="btn_save_settings">儲存設定</button></div>
     </form>
+    <hr>
+    <h2 data-i18n="settings_backup_title">備份／還原</h2>
+    <div class="row-actions" style="margin-top:0.5rem">
+      <button type="button" id="btn-export" data-i18n="btn_export">匯出備份 (JSON)</button>
+      <button type="button" id="btn-import" data-i18n="btn_import">匯入備份…</button>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
   </section>
 
   <!-- Tour dialog -->
@@ -146,7 +153,8 @@
   <!-- Room dialog -->
   <dialog id="dlg-room">
     <form method="dialog" id="frm-room" class="form">
-      <h2 data-i18n="dlg_room_new">新增房間</h2>
+      <h2 id="dlg-room-title" data-i18n="dlg_room_new">新增房間</h2>
+      <input type="hidden" id="room-id" name="id">
       <label><span data-i18n="lbl_room_label">房號／標籤</span><input id="room-label" name="label" required data-i18n-ph="ph_room_label" placeholder="例：301"></label>
       <label><span data-i18n="lbl_room_type">房型</span><select id="room-type" name="type">
         <option>Twin</option><option>Double</option><option>Single</option><option>Triple</option>

@@ -13,6 +13,25 @@ const EN_CHASE_MESSAGE =
   "deposit is {deposit} per person, and your balance is {due}. " +
   "Please pay by FPS to {fps_id} ({fps_name}) and send us the payment screenshot. Thank you!";
 
+/* Tracks keys whose stored JSON failed to parse. A flagged key is never
+   silently overwritten: _write refuses and surfaces an error, so corrupt
+   real data can't be destroyed by a routine save. Flags clear on import
+   (validated restore) or when the user fixes the data. */
+const _corruptedKeys = new Set();
+
+/* User-visible storage failure, in the app's alert pattern and language. */
+function _storageError(kind, key) {
+  const msg = _en()
+    ? kind === "corrupt"
+      ? "Data error: the saved data for this section is damaged and was NOT overwritten. Please export what you can, then restore from a backup."
+      : "Save failed: browser storage is unavailable or full. Your changes were NOT saved."
+    : kind === "corrupt"
+      ? "資料錯誤：此部分的儲存資料已損毀，未被覆寫。請先匯出可用資料，再從備份還原。"
+      : "儲存失敗：瀏覽器儲存空間不足或無法使用，您的更改尚未儲存。";
+  try { alert(msg); } catch { /* no alert surface (tests) */ }
+  throw new Error("gto-" + kind + ":" + key);
+}
+
 /* ---- derived member maths (shared by UI and tests) ------------------------- */
 function memberBalance(m) {
   return Math.round(((+m.price || 0) - (+m.deposit_paid || 0)) * 100) / 100;
@@ -49,11 +68,23 @@ const DB = {
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : fallback;
     } catch {
+      // Parse failed: the stored data is corrupt but REAL — flag it so the
+      // next _write refuses to overwrite it. Never silently wipe.
+      _corruptedKeys.add(key);
       return fallback;
     }
   },
   _write(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (_corruptedKeys.has(key)) _storageError("corrupt", key);
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      _storageError("full", key);
+    }
+  },
+  // Cleared only by a validated import/restore (or tests): never auto-cleared.
+  _clearCorrupt(key) {
+    _corruptedKeys.delete(key);
   },
   _nextId() {
     const n = (parseInt(localStorage.getItem("gt_seq") || "0", 10) || 0) + 1;
@@ -161,12 +192,15 @@ const DB = {
   },
   saveRoom(data) {
     const list = this._read("gt_rooms", []);
+    const existing = data.id ? list.find((r) => String(r.id) === String(data.id)) : null;
     const room = {
       id: data.id ? +data.id : this._nextId(),
       tour_id: +data.tour_id,
       label: data.label || "",
       type: data.type || "Twin",
-      member_ids: data.member_ids || [],
+      // On edit, keep the existing assignments unless a new list is given.
+      member_ids: data.member_ids !== undefined ? data.member_ids
+        : (existing ? existing.member_ids || [] : []),
     };
     const i = list.findIndex((r) => String(r.id) === String(room.id));
     if (i >= 0) list[i] = room; else list.push(room);
@@ -219,16 +253,61 @@ const DB = {
     };
   },
 
+  // ---- Backup / restore ------------------------------------------------------
+  // Export everything as one JSON object (downloaded by the Settings UI).
+  exportData() {
+    return {
+      app: "group-travel-ops",
+      version: 1,
+      exported_at: new Date().toISOString(),
+      tours: this.tours(),
+      members: this._read("gt_members", []),
+      rooms: this._read("gt_rooms", []),
+      settings: this._read("gt_settings", {}),
+      seq: parseInt(localStorage.getItem("gt_seq") || "0", 10) || 0,
+    };
+  },
+  // Shape check BEFORE anything is written. Returns true only when the
+  // object looks like one of our exports.
+  _validBackup(obj) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
+    if (!Array.isArray(obj.tours) || !Array.isArray(obj.members) || !Array.isArray(obj.rooms)) return false;
+    if (obj.settings !== undefined && (typeof obj.settings !== "object" || obj.settings === null || Array.isArray(obj.settings))) return false;
+    for (const t of obj.tours)
+      if (!t || typeof t !== "object" || t.id === undefined) return false;
+    for (const m of obj.members)
+      if (!m || typeof m !== "object" || m.id === undefined || m.tour_id === undefined) return false;
+    for (const r of obj.rooms)
+      if (!r || typeof r !== "object" || r.id === undefined || r.tour_id === undefined) return false;
+    return true;
+  },
+  // Restore from a validated export. Returns false and writes NOTHING when
+  // the shape is wrong; also the only path that clears corruption flags.
+  importData(obj) {
+    if (!this._validBackup(obj)) return false;
+    for (const k of ["gt_tours", "gt_members", "gt_rooms", "gt_settings"]) this._clearCorrupt(k);
+    this._write("gt_tours", obj.tours);
+    this._write("gt_members", obj.members);
+    this._write("gt_rooms", obj.rooms);
+    this._write("gt_settings", obj.settings || {});
+    try { localStorage.setItem("gt_seq", String(+obj.seq || 0)); } catch { /* keep old seq */ }
+    return true;
+  },
+
   // ---- WhatsApp ------------------------------------------------------------
   chaseLink(member) {
     const s = this.settings();
     const tour = this.getTour(member.tour_id);
+    // Fee, paid and due figures ALL come from the member's own numbers so
+    // price - paid === due exactly, even for a customized fee.
+    const price = +member.price || 0;
+    const paid = +member.deposit_paid || 0;
     const due = memberBalance(member);
     const text = (s.chase_message || "")
       .replace("{operator}", s.operator_name || "")
       .replace("{tour}", tour ? tour.name : "")
-      .replace("{price}", tour ? tour.price_per_person : "")
-      .replace("{deposit}", tour ? tour.deposit_per_person : "")
+      .replace("{price}", price)
+      .replace("{deposit}", paid)
       .replace("{due}", due)
       .replace("{fps_id}", s.fps_id || "")
       .replace("{fps_name}", s.fps_name || "");
